@@ -1,0 +1,16 @@
+{
+  "name": "markdown-preview",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "js-beautify": "^1.8.9"
+  },
+  "devDependencies": {
+    "@types/js-beautify": "^1.8.0",
+    "@types/lodash": "^4.14.120",
+    "@types/markdown-it": "^0.0.7",
+    "@types/marked": "^0.6.0",
+    "vue": "^2.5.22"
+  }
+}
