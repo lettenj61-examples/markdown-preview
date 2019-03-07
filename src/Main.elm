@@ -4,16 +4,24 @@ import Browser
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Json.Decode as Decode
+import Json.Encode as Encode
 
 
--- PORTS
+-- PORTS & EXPORTS
 
-{-| Request to compile markdown string into HTML markup with
-    external compiler.
+{-| Request JS to compile markdown string into HTML markup.
 
-    Outbound.
+    Outgoing.
 -}
 port compileMarkdown : String -> Cmd msg
+
+{-| Request JS to update `innerHTML` props under
+    virtual nodes which Elm controls.
+
+    Outgoing.
+-}
+port requestPreview : Bool -> Cmd msg
 
 {-| Receive compiled HTML text from JavaScript.
 
@@ -21,8 +29,8 @@ port compileMarkdown : String -> Cmd msg
 -}
 port htmlSource : (String -> msg) -> Sub msg
 
-
-{- main -}
+{-| Start running program.
+-}
 main : Program () Model Msg
 main =
   Browser.element
@@ -52,16 +60,24 @@ init _ =
 type Msg
   = Markdown String
   | CompiledHtml String
+  | ShowSource Bool
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
     Markdown mdText ->
-      ( model, compileMarkdown mdText )
+      ( model
+      , compileMarkdown mdText
+      )
 
     CompiledHtml result ->
       ( { model | htmlText = result }
-      , Cmd.none
+      , requestPreview model.showSource
+      )
+
+    ShowSource newFlag ->
+      ( { model | showSource = newFlag }
+      , requestPreview model.showSource
       )
 
 
@@ -69,28 +85,70 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-  div [id "app", class "section"]
-    [ div [class "container"]
-      [editor model]
+  div [ id "app", class "section" ]
+    [ div
+      [ class "container" ]
+      [ div
+        [ class "field" ]
+        [ showSourceSwitch
+        , label [class "label"] [text "Markdown"]
+        , editor
+        ]
+      , preview model
+      ]
     ]
 
-editor : Model -> Html msg
-editor model =
-  inside
-    ["field", "control"]
-    ( textarea
-      [ cols 80, rows 12, class "textarea" ]
-      []
-    )
+showSourceSwitch : Html Msg
+showSourceSwitch =
+  inside ["control"] <|
+    label
+      [ class "checkbox" ]
+      [ input
+        [ type_ "checkbox"
+        , onCheck ShowSource
+        ]
+        []
+      , text "View HTML source"
+      ]
+
+preview : Model -> Html Msg
+preview { showSource, htmlText } =
+  let
+    previewNode =
+      if showSource then
+        pre
+      else
+        div
+  in
+  previewNode
+    [ class "content"
+    , id "preview"
+    -- Elm will not edit `innerHTML` directly.
+    -- https://github.com/elm/html/issues/172
+    , attribute "data-render" htmlText
+    ]
+    []
+
+editor : Html Msg
+editor =
+  let
+    attrs =
+      [ cols 80
+      , rows 12
+      , class "textarea"
+      , onInput Markdown
+      ]
+  in
+  inside ["control"] <| textarea attrs []
 
 inside : List String -> Html msg -> Html msg
 inside classes content =
-  case (List.reverse classes) of
-    className :: more ->
-      inside more (div [class className] [content])
-    
+  case (List.reverse classes) of    
     [] ->
       content
+
+    className :: more ->
+      inside more (div [class className] [content])
 
 
 -- SUBSCRIPTIONS

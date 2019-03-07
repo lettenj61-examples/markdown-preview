@@ -8,7 +8,7 @@
       "es2015.promise"
     ],
     "types": [
-      "vue", "lodash", "markdown-it", "js-beautify"
+      "lodash", "markdown-it", "js-beautify"
     ],
     "module": "umd",
     "noEmit": true
