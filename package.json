@@ -2,6 +2,9 @@
   "name": "markdown-preview",
   "private": true,
   "license": "MIT",
+  "scripts": {
+    "make": "elm make --output=public/js/main.js --optimize src/Main.elm"
+  },
   "dependencies": {
     "js-beautify": "^1.8.9"
   },

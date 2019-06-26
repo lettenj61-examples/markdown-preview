@@ -12,23 +12,34 @@ var Ports = (function() {
   var compiler = markdownit().use(markdownitDeflist);
 
   /**
-   * Notify compilation result to port on Elm.
+   * Render compiled HTML.
    */
-  var notify = function(port, input) {
+  function renderHtml(input) {
     var output = compiler.render(input);
-    // port htmlSource :: (String -> msg) -> Cmd msg
-    port.send(beautifier.html(output));
+    var preview = document.getElementById('preview');
+    if (!preview) {
+      return;
+    }
+    preview.dataset.render = output.trim();
   };
 
   /**
    * Update preview element.
    */
-  function refresh(showSource) {
+  function refresh() {
     var preview = document.getElementById('preview');
-    if (!preview) {
+    var previewContent = document.querySelectorAll('.preview-content');
+    if (!preview || !previewContent.length) {
       return;
     }
-    preview[showSource ? 'innerText' : 'innerHTML'] = preview.dataset.render;
+    for (var i = 0; i < previewContent.length; i++) {
+      var elem = previewContent[i]
+      if (elem.nodeName === 'PRE') {
+        elem.innerText = preview.dataset.render;
+      } else {
+        elem.innerHTML = preview.dataset.render;
+      }
+    }
   }
 
   /**
@@ -39,12 +50,12 @@ var Ports = (function() {
   function install(app) {
     // port compileMarkdown :: String -> Cmd msg
     app.ports.compileMarkdown.subscribe(function(input) {
-      notify(app.ports.htmlSource, input);
+      renderHtml(input);
     });
 
     // port requestPreview :: () -> Cmd msg
-    app.ports.requestPreview.subscribe(function(mode) {
-      refresh(mode);
+    app.ports.requestPreview.subscribe(function() {
+      refresh();
     });
   }
 
