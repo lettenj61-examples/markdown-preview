@@ -13,8 +13,12 @@
     <div id="app"></div>
   </main>
   <script>
+    var searchParams = new URLSearchParams(location.search)
     var app = Elm.Preview.init({
-      node: document.getElementById('app')
+      node: document.getElementById('app'),
+      flags: {
+        sanitize: searchParams.get('sanitize') ?? '',
+      }
     });
   </script>
 </body>
