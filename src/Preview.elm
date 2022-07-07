@@ -4,16 +4,17 @@ import Browser
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
+import Json.Decode as Decode exposing (Decoder, Value)
 import Markdown
 
 
-
-main : Program () Model Msg
+main : Program Value Model Msg
 main =
-    Browser.sandbox
+    Browser.element
         { init = init
         , view = view
         , update = update
+        , subscriptions = subscriptions
         }
 
 
@@ -23,12 +24,47 @@ main =
 
 type alias Model =
     { source : String
+    , sanitize : Bool
     }
 
 
-init : Model
-init =
-    Model ""
+type alias Flags =
+    { sanitize : Bool
+    }
+
+
+init : Value -> ( Model, Cmd msg )
+init val =
+    let
+        sanitize =
+            Decode.decodeValue flagDecoder val
+                |> Result.map .sanitize
+                |> Result.toMaybe
+                |> Maybe.withDefault True
+    in
+    ( { source = ""
+      , sanitize = sanitize
+      }
+    , Cmd.none
+    )
+
+
+flagDecoder : Decoder Flags
+flagDecoder =
+    Decode.field "sanitize" Decode.string
+        |> Decode.andThen
+            (\s ->
+                case s of
+                    "true" ->
+                        Decode.succeed True
+
+                    "false" ->
+                        Decode.succeed False
+
+                    _ ->
+                        Decode.fail "sanitize must be `true` or `false`"
+            )
+        |> Decode.map Flags
 
 
 
@@ -39,12 +75,13 @@ type Msg
     = NewInput String
 
 
-
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd msg )
 update msg model =
     case msg of
         NewInput val ->
-            { model | source = val }
+            ( { model | source = val }
+            , Cmd.none
+            )
 
 
 
@@ -86,8 +123,30 @@ viewPreview model =
         [ class "column" ]
         [ if String.isEmpty model.source then
             text ""
+
           else
-            Markdown.toHtml
+            Markdown.toHtmlWith
+                (toMarkdownOptions model)
                 [ class "content" ]
                 model.source
         ]
+
+
+toMarkdownOptions : Model -> Markdown.Options
+toMarkdownOptions { sanitize } =
+    let
+        defaults =
+            Markdown.defaultOptions
+    in
+    { defaults
+        | sanitize = sanitize
+    }
+
+
+
+-- SUBSCRIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    Sub.none
